@@ -11,6 +11,11 @@ namespace ScreenshareHelper
     {
         readonly Color transKey = Color.SaddleBrown;
         private bool isActive = true;
+        private const int HOT_SIZE = 50; // thickness of the resize hot area in pixels
+        private bool isResizing = false;
+        private Point resizeStartMouse;
+        private Rectangle resizeStartBounds;
+        private HitTestResult currentHit = HitTestResult.None;
 
         public Form1()
         {
@@ -19,8 +24,12 @@ namespace ScreenshareHelper
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             this.TransparencyKey = transKey;
             RestoreWindowPosition();
+            this.BackColor = Color.Black;
 
             this.MouseDown += Form1_MouseDown;
+            this.MouseMove += Form1_MouseMove_ForResize;
+            this.MouseUp += Form1_MouseUp_ForResize;
+            this.MouseLeave += Form1_MouseLeave_ForResize;
             this.SizeChanged += Form1_SizeChanged;
         }
 
@@ -37,6 +46,16 @@ namespace ScreenshareHelper
         {
             if (e.Button == MouseButtons.Left)
             {
+                var hit = HitTest(e.Location);
+                if (hit != HitTestResult.None)
+                {
+                    isResizing = true;
+                    resizeStartMouse = Cursor.Position;
+                    resizeStartBounds = this.Bounds;
+                    currentHit = hit;
+                    return;
+                }
+
                 Cursor.Current = Cursors.Cross;
                 ReleaseCapture();
                 SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
@@ -148,7 +167,172 @@ namespace ScreenshareHelper
             }
         }
 
-        
+        private enum HitTestResult
+        {
+            None,
+            Top,
+            Bottom,
+            Left,
+            Right,
+            TopLeft,
+            TopRight,
+            BottomLeft,
+            BottomRight
+        }
+
+        private HitTestResult HitTest(Point clientPt)
+        {
+            var r = this.ClientRectangle;
+
+            bool left = clientPt.X >= 0 && clientPt.X <= HOT_SIZE;
+            bool right = clientPt.X >= r.Width - HOT_SIZE && clientPt.X <= r.Width;
+            bool top = clientPt.Y >= 0 && clientPt.Y <= HOT_SIZE;
+            bool bottom = clientPt.Y >= r.Height - HOT_SIZE && clientPt.Y <= r.Height;
+
+            if (top && left) return HitTestResult.TopLeft;
+            if (top && right) return HitTestResult.TopRight;
+            if (bottom && left) return HitTestResult.BottomLeft;
+            if (bottom && right) return HitTestResult.BottomRight;
+            if (left) return HitTestResult.Left;
+            if (right) return HitTestResult.Right;
+            if (top) return HitTestResult.Top;
+            if (bottom) return HitTestResult.Bottom;
+
+            return HitTestResult.None;
+        }
+
+        private void UpdateCursorForHit(HitTestResult hit)
+        {
+            switch (hit)
+            {
+                case HitTestResult.Top:
+                case HitTestResult.Bottom:
+                    Cursor = Cursors.SizeNS;
+                    break;
+                case HitTestResult.Left:
+                case HitTestResult.Right:
+                    Cursor = Cursors.SizeWE;
+                    break;
+                case HitTestResult.TopLeft:
+                case HitTestResult.BottomRight:
+                    Cursor = Cursors.SizeNWSE;
+                    break;
+                case HitTestResult.TopRight:
+                case HitTestResult.BottomLeft:
+                    Cursor = Cursors.SizeNESW;
+                    break;
+                default:
+                    Cursor = Cursors.Cross; // keep the existing cross for move
+                    break;
+            }
+        }
+
+        private void Form1_MouseMove_ForResize(object sender, MouseEventArgs e)
+        {
+            if (isResizing)
+            {
+                PerformResize(e.Location);
+                return;
+            }
+
+            var hit = HitTest(e.Location);
+            if (hit != currentHit)
+            {
+                currentHit = hit;
+                UpdateCursorForHit(currentHit);
+            }
+        }
+
+        private void Form1_MouseDown_ForResize(object sender, MouseEventArgs e)
+        {
+            // not wired directly - reuse existing Form1_MouseDown for move; if hit area present start resizing
+            if (e.Button == MouseButtons.Left)
+            {
+                var hit = HitTest(e.Location);
+                if (hit != HitTestResult.None)
+                {
+                    isResizing = true;
+                    resizeStartMouse = Cursor.Position;
+                    resizeStartBounds = this.Bounds;
+                    currentHit = hit;
+                }
+            }
+        }
+
+        private void Form1_MouseUp_ForResize(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left && isResizing)
+            {
+                isResizing = false;
+                currentHit = HitTest(e.Location);
+                UpdateCursorForHit(currentHit);
+            }
+        }
+
+        private void Form1_MouseLeave_ForResize(object sender, EventArgs e)
+        {
+            if (!isResizing)
+            {
+                currentHit = HitTestResult.None;
+                Cursor = Cursors.Cross;
+            }
+        }
+
+        private void PerformResize(Point clientMouse)
+        {
+            var screenMouse = Cursor.Position;
+            int dx = screenMouse.X - resizeStartMouse.X;
+            int dy = screenMouse.Y - resizeStartMouse.Y;
+
+            var b = resizeStartBounds;
+            var newBounds = b;
+
+            switch (currentHit)
+            {
+                case HitTestResult.Top:
+                    newBounds.Y = b.Y + dy;
+                    newBounds.Height = b.Height - dy;
+                    break;
+                case HitTestResult.Bottom:
+                    newBounds.Height = Math.Max(1, b.Height + dy);
+                    break;
+                case HitTestResult.Left:
+                    newBounds.X = b.X + dx;
+                    newBounds.Width = b.Width - dx;
+                    break;
+                case HitTestResult.Right:
+                    newBounds.Width = Math.Max(1, b.Width + dx);
+                    break;
+                case HitTestResult.TopLeft:
+                    newBounds.X = b.X + dx;
+                    newBounds.Width = b.Width - dx;
+                    newBounds.Y = b.Y + dy;
+                    newBounds.Height = b.Height - dy;
+                    break;
+                case HitTestResult.TopRight:
+                    newBounds.Y = b.Y + dy;
+                    newBounds.Height = b.Height - dy;
+                    newBounds.Width = Math.Max(1, b.Width + dx);
+                    break;
+                case HitTestResult.BottomLeft:
+                    newBounds.X = b.X + dx;
+                    newBounds.Width = b.Width - dx;
+                    newBounds.Height = Math.Max(1, b.Height + dy);
+                    break;
+                case HitTestResult.BottomRight:
+                    newBounds.Width = Math.Max(1, b.Width + dx);
+                    newBounds.Height = Math.Max(1, b.Height + dy);
+                    break;
+            }
+
+            const int minW = 50, minH = 30;
+            if (newBounds.Width < minW) newBounds.Width = minW;
+            if (newBounds.Height < minH) newBounds.Height = minH;
+
+            this.Bounds = newBounds;
+            Settings.Default.CaptureSize = this.Size;
+            this.Invalidate();
+        }
 
 
 
@@ -210,7 +394,7 @@ namespace ScreenshareHelper
         {
             isActive = true;
             FormBorderStyle = FormBorderStyle.None;//update CreateParams
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
         private void Form1_Deactivate(object sender, EventArgs e)
         {
@@ -218,7 +402,7 @@ namespace ScreenshareHelper
             FormBorderStyle = FormBorderStyle.None; //update CreateParams
             this.Size = Settings.Default.CaptureSize;
 
-            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = isActive;
+            buttonSetCaptureArea.Visible = buttonCloseApp.Visible = labelSize.Visible = isActive;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)

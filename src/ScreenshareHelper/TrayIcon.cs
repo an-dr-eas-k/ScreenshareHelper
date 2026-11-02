@@ -77,7 +77,7 @@ namespace ScreenshareHelper
             normal.Enabled &= !busy;
             camera.Enabled &= !busy;
             virtualMonitor.Enabled = !busy;
-            installDriver.Enabled = !busy && !ParsecDriverSetup.IsInstalled;
+            installDriver.Enabled = !busy && !VirtualDisplay.AnyDriverInstalled;
             uninstallDriver.Enabled = !busy && ParsecDriverSetup.CanUninstall;
         }
 

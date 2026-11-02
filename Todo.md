@@ -35,6 +35,8 @@ Priority: 🔴 high · 🟡 medium · 🟢 nice to have
 - [ ] 🟢 README: fix typos, add a GIF/screenshot of the tool in action.
 
 ## Done
+- [x] Virtual monitor with the open-source Virtual Display Driver (MTT1337) as alternative to Parsec: its permanent monitor is attached/detached via `SetDisplayConfig` (no admin), used when the Parsec driver is not installed
+- [x] Restart after a crash or hang via Windows Error Reporting (`RegisterApplicationRestart`), no watchdog service needed
 - [x] Areas remembered per monitor layout (dock, lid closed, other primary monitor): known layouts restore their areas, a new one keeps them if they still lie on a monitor, otherwise asks to set the area (#23)
 - [x] Tray icon with modes Normal / Virtual camera / Virtual monitor (remembered, no window in camera/vmon mode, "Set area..."), red frame and mouse pointer toggles, Start with Windows, Setup (install/uninstall camera and Parsec driver) (#22)
 - [x] Robust capture: errors are retried instead of a permanent GDI fallback, error message cleared once capture works again; WGC dropped (exe 28 MB → 1.9 MB); CLI reduced to `-n`, `-i`, `--color` (#22)

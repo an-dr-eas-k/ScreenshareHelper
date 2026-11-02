@@ -163,8 +163,8 @@ namespace ScreenshareHelper
         }
 
         /// <summary>Bounds of the real monitors; the virtual monitor comes and goes with the mode, so it is not part of the layout.</summary>
-        private static List<(string id, Rectangle bounds)> PhysicalMonitors() => ParsecVirtualDisplay.AttachedDisplays()
-            .Where(d => !ParsecVirtualDisplay.IsVirtualMonitor(d.monitorId) && !d.bounds.IsEmpty)
+        private static List<(string id, Rectangle bounds)> PhysicalMonitors() => VirtualDisplay.AttachedDisplays()
+            .Where(d => !VirtualDisplay.IsVirtualMonitor(d.monitorId) && !d.bounds.IsEmpty)
             .Select(d => (HardwareId(d.monitorId), d.bounds))
             .ToList();
 

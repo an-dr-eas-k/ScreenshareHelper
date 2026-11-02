@@ -292,7 +292,7 @@ namespace ScreenshareHelper
 
             if (newMode == AppMode.Camera && !StartCamera())
                 newMode = AppMode.Normal;
-            if (newMode == AppMode.VirtualMonitor && !ParsecDriverSetup.IsInstalled)
+            if (newMode == AppMode.VirtualMonitor && !VirtualDisplay.AnyDriverInstalled)
             {
                 if (VirtualMonitorForm.AskToInstallDriver())
                     _ = InstallDriverAsync(switchToVirtualMonitor: true);

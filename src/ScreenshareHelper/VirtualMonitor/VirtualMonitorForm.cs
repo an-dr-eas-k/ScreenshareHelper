@@ -15,7 +15,7 @@ namespace ScreenshareHelper.VirtualMonitor
     /// </summary>
     public sealed class VirtualMonitorForm : Form
     {
-        private ParsecVirtualDisplay display;
+        private VirtualDisplay display;
         private Rectangle area;
         private Size? resolution;
         private ResilientCapture capture = new ResilientCapture();
@@ -44,7 +44,8 @@ namespace ScreenshareHelper.VirtualMonitor
         public static bool AskToInstallDriver()
         {
             var text = "The virtual monitor needs the free Parsec Virtual Display Driver (signed by Parsec, installed once with administrator rights).\n\n" +
-                "Download and install it now?";
+                $"Alternatively install the open-source Virtual Display Driver yourself ({VddVirtualDisplay.DriverUrl}).\n\n" +
+                "Download and install the Parsec driver now?";
             return MessageBox.Show(text, "ScreenshareHelper", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes;
         }
 
@@ -60,7 +61,7 @@ namespace ScreenshareHelper.VirtualMonitor
             BackColor = Color.Black;
             DoubleBuffered = true;
 
-            display = new ParsecVirtualDisplay();
+            display = VirtualDisplay.Create();
             display.Configure(area.Size, resolution);
             Bounds = display.Bounds;
             if (Properties.Settings.Default.ShowAreaFrame)
@@ -71,7 +72,7 @@ namespace ScreenshareHelper.VirtualMonitor
             captureTimer.Start();
         }
 
-        /// <summary>False if the virtual monitor was lost (see <see cref="ParsecVirtualDisplay.IsAlive"/>).</summary>
+        /// <summary>False if the virtual monitor was lost (see <see cref="VirtualDisplay.IsAlive"/>).</summary>
         public bool IsAlive => display != null && display.IsAlive;
 
         /// <summary>Shows another area and/or switches the resolution (with Auto also when the area size changed).</summary>

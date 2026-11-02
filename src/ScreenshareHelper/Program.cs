@@ -65,6 +65,9 @@ namespace ScreenshareHelper
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             CopyMouse = Settings.Default.CopyMouse;
+            // Windows restarts us after a crash or hang (once running >= 60 s); not after reboots, that's "Start with Windows"
+            RegisterApplicationRestart(string.Join(" ", args.Select(a => a.Length > 0 && a.IndexOfAny(new[] { ' ', '"' }) < 0 ? a : $"\"{a.Replace("\"", "\\\"")}\"")),
+                RESTART_NO_REBOOT);
             var form = new Form1();
             Application.Run(form);
             form.ReleaseCaptureResources();
@@ -143,6 +146,10 @@ namespace ScreenshareHelper
         #endregion
 
         #region Win32
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        private static extern int RegisterApplicationRestart(string commandLineArgs, int flags);
+        private const int RESTART_NO_REBOOT = 8;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT

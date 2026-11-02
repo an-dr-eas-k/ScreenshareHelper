@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace ScreenshareHelper.VirtualMonitor
 {
@@ -25,8 +26,37 @@ namespace ScreenshareHelper.VirtualMonitor
         /// <summary>True if one of the supported drivers is there.</summary>
         public static bool AnyDriverInstalled => ParsecVirtualDisplay.IsDriverInstalled() || VddVirtualDisplay.IsDriverInstalled();
 
-        /// <summary>Uses the Parsec driver if it is installed, otherwise the Virtual Display Driver.</summary>
-        public static VirtualDisplay Create() => ParsecVirtualDisplay.IsDriverInstalled() ? new ParsecVirtualDisplay() : new VddVirtualDisplay();
+        /// <summary>The preferred driver if it is installed, otherwise the other one.</summary>
+        public static VirtualDisplay Create(bool preferVdd) =>
+            (preferVdd && VddVirtualDisplay.IsDriverInstalled()) || !ParsecVirtualDisplay.IsDriverInstalled()
+                ? new VddVirtualDisplay()
+                : new ParsecVirtualDisplay();
+
+        /// <summary>
+        /// Waits until <paramref name="findOnDesktop"/> returns the GDI name of the monitor on the desktop. Null after 10 s.
+        /// Windows may duplicate a new monitor instead of extending the desktop (laptops often default to Duplicate),
+        /// then it has no area of its own: switch to Extend like Win+P (Windows remembers that for this monitor set).
+        /// </summary>
+        protected static string WaitForDesktop(Func<string> findOnDesktop)
+        {
+            var sw = Stopwatch.StartNew();
+            bool extended = false;
+            while (sw.ElapsedMilliseconds < 10000)
+            {
+                var name = findOnDesktop();
+                if (name != null)
+                    return name;
+                if (!extended && sw.ElapsedMilliseconds > 1500)
+                {
+                    extended = true;
+                    int result = SetDisplayConfig(0, IntPtr.Zero, 0, IntPtr.Zero, SDC_APPLY | SDC_TOPOLOGY_EXTEND);
+                    if (result != 0)
+                        Debug.WriteLine($"SetDisplayConfig(SDC_TOPOLOGY_EXTEND) failed: {result}");
+                }
+                Thread.Sleep(100);
+            }
+            return null;
+        }
 
         /// <summary>Monitor bounds in virtual desktop coordinates (physical pixels).</summary>
         public Rectangle Bounds
@@ -160,6 +190,8 @@ namespace ScreenshareHelper.VirtualMonitor
         private const int DM_DISPLAYFREQUENCY = 0x400000;
         private const int CDS_UPDATEREGISTRY = 0x1;
         private const int DISP_CHANGE_SUCCESSFUL = 0;
+        private const uint SDC_TOPOLOGY_EXTEND = 0x4;
+        private const uint SDC_APPLY = 0x80;
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct DISPLAY_DEVICE
@@ -215,6 +247,9 @@ namespace ScreenshareHelper.VirtualMonitor
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int ChangeDisplaySettingsEx(string deviceName, ref DEVMODE devMode, IntPtr hwnd, int flags, IntPtr param);
+
+        [DllImport("user32.dll")]
+        private static extern int SetDisplayConfig(uint numPathArrayElements, IntPtr pathArray, uint numModeInfoArrayElements, IntPtr modeInfoArray, uint flags);
         #endregion
     }
 }

@@ -55,13 +55,7 @@ namespace ScreenshareHelper.VirtualMonitor
             pingThread = new Thread(PingLoop) { IsBackground = true, Name = "Parsec VDD keep-alive" };
             pingThread.Start();
 
-            // Windows needs a moment to attach the new monitor
-            var sw = Stopwatch.StartNew();
-            while (DeviceName == null && sw.ElapsedMilliseconds < 10000)
-            {
-                Thread.Sleep(100);
-                DeviceName = DisplayNames(MonitorId).Except(before).FirstOrDefault();
-            }
+            DeviceName = WaitForDesktop(() => DisplayNames(MonitorId).Except(before).FirstOrDefault());
             if (DeviceName == null)
             {
                 Dispose();

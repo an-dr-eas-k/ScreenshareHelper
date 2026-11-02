@@ -40,7 +40,7 @@ More in the menu:
 - **Red frame around the area** (virtual monitor mode): turn the frame that marks the shared area on or off.
 - **Mouse pointer**: draw the mouse pointer into the shared image or not (e.g. Google Meet draws its own).
 - **Start with Windows**: start the tool when you log in.
-- **Setup**: install or uninstall the virtual camera and the virtual monitor driver.
+- **Setup**: install or uninstall the virtual camera and the virtual monitor driver, or use the open-source Virtual Display Driver for the virtual monitor (if installed).
 - **Exit**.
 
 ### Different monitor setups
@@ -75,11 +75,11 @@ To remove it: **Setup > Uninstall virtual camera**.
 
 The virtual monitor needs the free [Parsec Virtual Display Driver](https://support.parsec.app/hc/en-us/articles/360054478211-Parsec-Virtual-Displays) (signed, installed once with administrator rights). If it is missing, the tool offers to download and run the installer (also in **Setup** in the tray menu, where you can uninstall it again). You don't need a Parsec account or the Parsec app.
 
-Instead of Parsec's driver you can use the open-source [Virtual Display Driver](https://github.com/VirtualDrivers/Virtual-Display-Driver) (MIT). Install it yourself (e.g. with its *Virtual Driver Control* app or `winget install --id=VirtualDrivers.Virtual-Display-Driver -e`); the tool uses it when the Parsec driver is not installed. Its monitor always exists while the driver runs, so the tool connects it to the desktop in virtual monitor mode and disconnects it again when you switch to another mode or close the tool (if the tool crashes, it stays connected until the next time; you can also disconnect it in Windows display settings). The driver's own settings are not changed.
+Instead of Parsec's driver you can use the open-source [Virtual Display Driver](https://github.com/VirtualDrivers/Virtual-Display-Driver) (MIT). Install it yourself with its *Virtual Driver Control* app: download it from the releases page (or `winget install --id=VirtualDrivers.Virtual-Display-Driver -e`, which only unpacks that app), start it and click **Install**; the tool uses it when the Parsec driver is not installed, or when you check **Setup > Use the open-source Virtual Display Driver** in the tray menu. Its monitor always exists while the driver runs, so the tool connects it to the desktop in virtual monitor mode and disconnects it again when you switch to another mode or close the tool (if the tool crashes, it stays connected until the next time; you can also disconnect it in Windows display settings). The driver's own settings are not changed.
 
 The resolution drop-down sets the monitor resolution: **1920x1080** (default, what Teams shares at most), 1280x720, 2560x1440, 3840x2160 or **Auto** (the largest resolution that fits into the area without upscaling). If the area doesn't have the monitor's aspect ratio, the image gets black bars; **16:9** makes the window 16:9 (keeps the height, adjusts the width) before you click "Set".
 
-The monitor is placed at the bottom-right corner of your desktop, touching the other monitors only at the corner, so your mouse can't wander onto it.
+The monitor is placed at the bottom-right corner of your desktop, touching the other monitors only at the corner, so your mouse can't wander onto it. If Windows duplicates the new monitor instead of extending the desktop (the default on some laptops), the tool switches to "Extend" like Win+P; Windows remembers that for the next time.
 
 ## Donate
 If you like the tool, just [Paypal.me](https://paypal.me/mlproe?locale.x=de_DE)

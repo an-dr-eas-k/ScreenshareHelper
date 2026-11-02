@@ -52,18 +52,13 @@ namespace ScreenshareHelper.VirtualMonitor
             if ((path.flags & DISPLAYCONFIG_PATH_ACTIVE) == 0)
                 Attach(path);
 
-            // Windows needs a moment to attach the monitor
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 10000)
+            DeviceName = WaitForDesktop(() =>
             {
                 var name = ActiveGdiName();
-                if (name != null && DisplayNames(MonitorId).Contains(name))
-                {
-                    DeviceName = name;
-                    return;
-                }
-                Thread.Sleep(100);
-            }
+                return name != null && DisplayNames(MonitorId).Contains(name) ? name : null;
+            });
+            if (DeviceName != null)
+                return;
             Dispose();
             throw new InvalidOperationException("The virtual display was attached, but Windows did not add it to the desktop.");
         }

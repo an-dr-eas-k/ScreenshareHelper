@@ -61,7 +61,7 @@ namespace ScreenshareHelper.VirtualMonitor
             BackColor = Color.Black;
             DoubleBuffered = true;
 
-            display = VirtualDisplay.Create();
+            display = VirtualDisplay.Create(Properties.Settings.Default.UseVdd);
             display.Configure(area.Size, resolution);
             Bounds = display.Bounds;
             if (Properties.Settings.Default.ShowAreaFrame)

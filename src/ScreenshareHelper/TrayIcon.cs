@@ -15,7 +15,7 @@ namespace ScreenshareHelper
         private readonly Form1 owner;
         private readonly NotifyIcon icon;
         private readonly ToolStripMenuItem normal, camera, virtualMonitor, setArea, areaFrame, mouse, autostart;
-        private readonly ToolStripMenuItem installCamera, uninstallCamera, installDriver, uninstallDriver;
+        private readonly ToolStripMenuItem installCamera, uninstallCamera, installDriver, uninstallDriver, useVdd;
 
         public TrayIcon(Form1 owner)
         {
@@ -33,8 +33,9 @@ namespace ScreenshareHelper
             uninstallCamera = new ToolStripMenuItem("Uninstall virtual camera", null, (s, e) => owner.UninstallCamera());
             installDriver = new ToolStripMenuItem("Install virtual monitor driver (Parsec)", null, async (s, e) => await owner.InstallDriverAsync(switchToVirtualMonitor: false));
             uninstallDriver = new ToolStripMenuItem("Uninstall virtual monitor driver (Parsec)", null, async (s, e) => await owner.UninstallDriverAsync());
+            useVdd = new ToolStripMenuItem("Use the open-source Virtual Display Driver", null, (s, e) => owner.UseVdd = !owner.UseVdd);
             var setup = new ToolStripMenuItem("Setup");
-            setup.DropDownItems.AddRange(new ToolStripItem[] { installCamera, uninstallCamera, new ToolStripSeparator(), installDriver, uninstallDriver });
+            setup.DropDownItems.AddRange(new ToolStripItem[] { installCamera, uninstallCamera, new ToolStripSeparator(), installDriver, uninstallDriver, useVdd });
 
             var menu = new ContextMenuStrip();
             menu.Items.AddRange(new ToolStripItem[]
@@ -79,6 +80,10 @@ namespace ScreenshareHelper
             virtualMonitor.Enabled = !busy;
             installDriver.Enabled = !busy && !VirtualDisplay.AnyDriverInstalled;
             uninstallDriver.Enabled = !busy && ParsecDriverSetup.CanUninstall;
+            bool vddInstalled = VddVirtualDisplay.IsDriverInstalled();
+            useVdd.Enabled = !busy && vddInstalled;
+            useVdd.Checked = vddInstalled && owner.UseVdd;
+            useVdd.Text = vddInstalled ? "Use the open-source Virtual Display Driver" : "Use the open-source Virtual Display Driver (not installed)";
         }
 
         public void ShowInfo(string text) => icon.ShowBalloonTip(5000, "ScreenshareHelper", text, ToolTipIcon.Info);

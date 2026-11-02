@@ -192,5 +192,18 @@ namespace ScreenshareHelper.Properties {
                 this["AreaProfiles"] = value;
             }
         }
+
+        /// <summary>Virtual monitor from the open-source Virtual Display Driver instead of Parsec's (if installed).</summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool UseVdd {
+            get {
+                return ((bool)(this["UseVdd"]));
+            }
+            set {
+                this["UseVdd"] = value;
+            }
+        }
     }
 }

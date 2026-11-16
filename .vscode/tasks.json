@@ -47,6 +47,18 @@
                 "cwd": "src/ScreenshareHelper"
             },
             "problemMatcher": "$msCompile"
+        },
+        {
+            // temporary: close the running app, publish into Program Files (folder is user-writable here) and start it again
+            "label": "install to Program Files (temporary)",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "$ErrorActionPreference = 'Stop'; $dir = 'C:\\Program Files\\ScreenshareHelper'; Get-Process ScreenshareHelper -ErrorAction SilentlyContinue | Where-Object { $_.Path -like ($dir + '\\*') } | ForEach-Object { if (-not $_.CloseMainWindow() -or -not $_.WaitForExit(5000)) { $_.Kill(); $_.WaitForExit() } }; dotnet publish src/ScreenshareHelper/ScreenshareHelper.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=false -o $dir; if ($LASTEXITCODE) { exit $LASTEXITCODE }; Start-Process (Join-Path $dir 'ScreenshareHelper.exe') -ArgumentList '--color', '#48A0C7'"
+            ],
+            "problemMatcher": "$msCompile"
         }
     ]
 }

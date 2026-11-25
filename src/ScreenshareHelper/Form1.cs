@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ScreenshareHelper.Capture;
@@ -635,6 +636,11 @@ namespace ScreenshareHelper
             }
         }
 
+        // Adding a monitor to the driver while Windows still reconfigures the displays (resume, dock, unplug) makes the
+        // driver host crash (Device Manager error 43): wait until the monitor layout has been quiet for this long
+        private const long TopologySettleMs = 20000;
+        private long lastTopologyActivity = long.MinValue / 2;
+
         private bool watchdogBusy;
         private int watchdogFailures; // monitor re-creations failed in a row
         private bool repairOffered; // once per failure episode, the user may have declined
@@ -651,6 +657,9 @@ namespace ScreenshareHelper
         {
             // hidden window = not in "Set area"; busy = installer running
             if (mode != AppMode.VirtualMonitor || busy || Visible || closing || watchdogBusy)
+                return;
+
+            if (Environment.TickCount64 - Interlocked.Read(ref lastTopologyActivity) < TopologySettleMs)
                 return;
 
             watchdogBusy = true;
@@ -746,8 +755,39 @@ namespace ScreenshareHelper
             return true;
         }
 
+        /// <summary>
+        /// Removes the virtual monitor before the computer sleeps, so the driver has no stale monitor to trip over on
+        /// resume; the watchdog adds it again once the layout has settled.
+        /// </summary>
+        private void SystemEvents_PowerModeChanged(object sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+        {
+            Interlocked.Exchange(ref lastTopologyActivity, Environment.TickCount64);
+            if (e.Mode != Microsoft.Win32.PowerModes.Suspend || closing || !IsHandleCreated)
+                return;
+
+            try
+            {
+                Task release = null;
+                Invoke(new Action(() =>
+                {
+                    var suspended = virtualMonitor;
+                    if (suspended == null || closing)
+                        return;
+                    virtualMonitor = null;
+                    suspended.Close();
+                    release = suspended.ReleaseResourcesAsync();
+                }));
+                release?.Wait(3000);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+        }
+
         private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
         {
+            Interlocked.Exchange(ref lastTopologyActivity, Environment.TickCount64);
             // Windows goes through several intermediate layouts while a dock connects: wait until it settles
             if (IsHandleCreated && !closing)
                 BeginInvoke(new Action(() =>
@@ -889,6 +929,7 @@ namespace ScreenshareHelper
             virtualMonitorWatchdog.Stop();
             layoutSettleTimer.Stop();
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
+            Microsoft.Win32.SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
             closingVirtualMonitor = virtualMonitor;
             virtualMonitor?.Close();
             tray?.Dispose();
@@ -938,6 +979,7 @@ namespace ScreenshareHelper
             layoutSettleTimer.Interval = 2000;
             layoutSettleTimer.Tick += LayoutSettleTimer_Tick;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
+            Microsoft.Win32.SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         }
 
         protected override void OnShown(EventArgs e)
